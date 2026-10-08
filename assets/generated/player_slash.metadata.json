@@ -1,0 +1,46 @@
+{
+	"animation_name": "swinging_katana_forward_in_a_fast_horizontal_slash_facing_right",
+	"animation_style": "",
+	"animation_type": "swinging katana forward in a fast horizontal slash facing right",
+	"columns": 4,
+	"directions": [],
+	"frame_count": 4,
+	"frame_height": 32,
+	"frame_paths": [],
+	"frame_regions": [
+		{
+			"h": 32,
+			"w": 32,
+			"x": 0,
+			"y": 0
+		},
+		{
+			"h": 32,
+			"w": 32,
+			"x": 32,
+			"y": 0
+		},
+		{
+			"h": 32,
+			"w": 32,
+			"x": 64,
+			"y": 0
+		},
+		{
+			"h": 32,
+			"w": 32,
+			"x": 96,
+			"y": 0
+		}
+	],
+	"frame_width": 32,
+	"name": "player_slash",
+	"prompt": "swinging katana forward in a fast horizontal slash facing right",
+	"rows": 1,
+	"source_image": "res://assets/generated/player_base.png",
+	"source_tool": "animate_sprite",
+	"spritesheet_height": 32,
+	"spritesheet_path": "res://assets/generated/player_slash.png",
+	"spritesheet_width": 128,
+	"type": "animation"
+}

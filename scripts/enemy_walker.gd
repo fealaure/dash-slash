@@ -1,0 +1,37 @@
+class_name EnemyWalker
+extends CharacterBody2D
+## Soldado que patrulha o chão, vira em paredes e beiradas. Morre com 1 golpe.
+
+const SPEED = 30.0
+const GRAVITY = 1000.0
+
+@export var direction: int = 1
+
+var dead: bool = false
+
+@onready var sprite: AnimatedSprite2D = $AnimatedSprite2D
+@onready var floor_ray: RayCast2D = $FloorRay
+
+
+func _ready() -> void:
+	sprite.play("walk")
+
+
+func _physics_process(delta: float) -> void:
+	if dead:
+		return
+	velocity.y = minf(velocity.y + GRAVITY * delta, 400.0)
+	velocity.x = direction * SPEED
+	move_and_slide()
+	floor_ray.position.x = 7.0 * direction
+	if is_on_floor() and (is_on_wall() or not floor_ray.is_colliding()):
+		direction = -direction
+	sprite.flip_h = direction < 0
+
+
+func hit() -> void:
+	if dead:
+		return
+	dead = true
+	FX.burst(get_parent(), global_position + Vector2(0, -12), Color(1.0, 0.45, 0.2))
+	queue_free()

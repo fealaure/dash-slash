@@ -1,0 +1,79 @@
+[gd_scene format=3 uid="uid://c7p7s1x0hdmuk"]
+
+[ext_resource type="Script" uid="uid://np13ohrvuy8u" path="res://scripts/enemy_walker.gd" id="1_script"]
+[ext_resource type="Shader" path="res://shaders/outline.gdshader" id="2_8rhmp"]
+[ext_resource type="Texture2D" uid="uid://v3bk22jddkch" path="res://assets/generated/enemy_walker_walk.png" id="2_ndhhd"]
+
+[sub_resource type="RectangleShape2D" id="Shape_body"]
+size = Vector2(12, 22)
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_kp614"]
+shader = ExtResource("2_8rhmp")
+shader_parameter/outline_color = Color(1, 0.55, 0.2, 1)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_8rhmp"]
+atlas = ExtResource("2_ndhhd")
+region = Rect2(0, 0, 32, 32)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_kp614"]
+atlas = ExtResource("2_ndhhd")
+region = Rect2(32, 0, 32, 32)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_7gd67"]
+atlas = ExtResource("2_ndhhd")
+region = Rect2(64, 0, 32, 32)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_1l7al"]
+atlas = ExtResource("2_ndhhd")
+region = Rect2(96, 0, 32, 32)
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_pijrk"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_8rhmp")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_kp614")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_7gd67")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_1l7al")
+}],
+"loop": 1,
+"name": &"walk",
+"speed": 6.0
+}]
+
+[sub_resource type="RectangleShape2D" id="Shape_hurt"]
+size = Vector2(14, 24)
+
+[node name="EnemyWalker" type="CharacterBody2D" unique_id=1680735060]
+collision_layer = 0
+script = ExtResource("1_script")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1115712974]
+position = Vector2(0, -11)
+shape = SubResource("Shape_body")
+
+[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="." unique_id=869882924]
+material = SubResource("ShaderMaterial_kp614")
+position = Vector2(0, -16)
+sprite_frames = SubResource("SpriteFrames_pijrk")
+animation = &"walk"
+autoplay = "walk"
+
+[node name="FloorRay" type="RayCast2D" parent="." unique_id=984596507]
+position = Vector2(7, -2)
+target_position = Vector2(0, 8)
+
+[node name="Hurtbox" type="Area2D" parent="." unique_id=1782627896]
+collision_layer = 4
+collision_mask = 0
+monitoring = false
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Hurtbox" unique_id=1918024023]
+position = Vector2(0, -12)
+shape = SubResource("Shape_hurt")

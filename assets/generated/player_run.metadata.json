@@ -1,0 +1,58 @@
+{
+	"animation_name": "running_fast_facing_right",
+	"animation_style": "",
+	"animation_type": "running fast facing right",
+	"columns": 6,
+	"directions": [],
+	"frame_count": 6,
+	"frame_height": 32,
+	"frame_paths": [],
+	"frame_regions": [
+		{
+			"h": 32,
+			"w": 32,
+			"x": 0,
+			"y": 0
+		},
+		{
+			"h": 32,
+			"w": 32,
+			"x": 32,
+			"y": 0
+		},
+		{
+			"h": 32,
+			"w": 32,
+			"x": 64,
+			"y": 0
+		},
+		{
+			"h": 32,
+			"w": 32,
+			"x": 96,
+			"y": 0
+		},
+		{
+			"h": 32,
+			"w": 32,
+			"x": 128,
+			"y": 0
+		},
+		{
+			"h": 32,
+			"w": 32,
+			"x": 160,
+			"y": 0
+		}
+	],
+	"frame_width": 32,
+	"name": "player_run",
+	"prompt": "running fast facing right",
+	"rows": 1,
+	"source_image": "res://assets/generated/player_base.png",
+	"source_tool": "animate_sprite",
+	"spritesheet_height": 32,
+	"spritesheet_path": "res://assets/generated/player_run.png",
+	"spritesheet_width": 192,
+	"type": "animation"
+}

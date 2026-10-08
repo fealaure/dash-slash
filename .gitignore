@@ -1,0 +1,37 @@
+# Godot 4+ specific ignores
+.godot/
+/android/
+
+# Addon do agente Ziva (instalado localmente pelo editor)
+/addons/ziva_agent/
+
+# Builds / exportações
+/build/
+/builds/
+/export/
+/exports/
+*.apk
+*.aab
+*.exe
+*.pck
+*.zip
+export_credentials.cfg
+
+# Arquivos gerados pelo Godot / Mono (C#)
+.mono/
+.import/
+data_*/
+mono_crash.*.json
+*.translation
+*.tmp
+
+# Configurações de IDEs/editores
+.vscode/
+.idea/
+*.swp
+*~
+
+# Arquivos do sistema operacional
+.DS_Store
+Thumbs.db
+desktop.ini
