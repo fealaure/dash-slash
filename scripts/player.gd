@@ -1,6 +1,6 @@
 class_name Player
 extends CharacterBody2D
-## Ninja com corrida automática (direita -> esquerda), pulo, agarrar/pular de
+## Ninja com corrida automática (esquerda -> direita), pulo, agarrar/pular de
 ## parede, ataque de espada e dano com knockback estilo Castlevania.
 
 signal health_changed(current: int, maximum: int)
@@ -23,24 +23,24 @@ const ATTACK_COOLDOWN = 0.26
 const KNOCKBACK = Vector2(150.0, -230.0)
 const HURT_STUN = 0.35
 const INVINCIBLE_TIME = 1.2
-## Câmera mostra mais espaço à esquerda (direção da corrida) e acima (verticalidade)
-const CAMERA_OFFSET = Vector2(-70, -40)
+## Câmera mostra mais espaço à direita (direção da corrida) e acima (verticalidade)
+const CAMERA_OFFSET = Vector2(70, -40)
 
 @export var max_health: int = 3
 ## -1 = corre para a esquerda, 1 = direita
-@export var main_direction: int = -1
+@export var main_direction: int = 1
 
 var active: bool = false
 var is_dead: bool = false
 var health: int = 3
 var gems: int = 0
-var facing: int = -1
+var facing: int = 1
 var air_speed: float = RUN_SPEED
 var death_y: float = 100000.0
 
 var _wall_dir: int = 0
 var _clinging: bool = false
-var _attack_dir: int = -1
+var _attack_dir: int = 1
 var _coyote: float = 0.0
 var _wall_coyote: float = 0.0
 var _jump_buffer: float = 0.0
@@ -58,6 +58,7 @@ var _invincible: float = 0.0
 
 
 func _ready() -> void:
+	add_to_group("player")
 	health = max_health
 	facing = main_direction
 	_attack_dir = facing
@@ -202,6 +203,8 @@ func _check_damage() -> void:
 		if src.get("dead"):
 			continue
 		take_damage(area.global_position.x)
+		if src.has_method("on_hit_player"):
+			src.call("on_hit_player")
 		return
 
 
@@ -224,6 +227,14 @@ func take_damage(source_x: float) -> void:
 	_invincible = INVINCIBLE_TIME
 	_attack_timer = 0.0
 	_clinging = false
+
+
+## Lançado para cima por uma mola
+func bounce(launch_velocity: float) -> void:
+	velocity.y = launch_velocity
+	air_speed = RUN_SPEED
+	_coyote = 0.0
+	_jump_buffer = 0.0
 
 
 func add_gem() -> void:

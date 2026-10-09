@@ -1,9 +1,10 @@
 class_name Level
 extends Node2D
 ## Monta a fase sorteando blocos ASCII (res://levels/chunks.gd) a partir de
-## uma seed, gerencia início, morte, vitória e reinício.
-## Morrer repete a mesma fase; completar sorteia uma nova.
-## Seed fixa para testes: godot --path . -- --seed=123
+## uma seed, gerencia início, morte, vitória e a passagem para a próxima fase.
+## Morrer repete a mesma fase; completar avança para a fase seguinte, mais
+## longa e mais difícil.
+## Para testes: godot --path . -- --seed=123 --stage=2
 
 const TILE = 16
 const CHUNKS = preload("res://levels/chunks.gd")
@@ -11,14 +12,25 @@ const CHUNKS = preload("res://levels/chunks.gd")
 ## manter o jogador no meio da tela, acima dos botões de toque.
 const LEVEL_ROWS = 52
 const GROUND_ROW = 34
-## Quantos blocos sorteados entre o início e o fim
-const MIDDLE_COUNT = 10
+## Quantos blocos sorteados entre o início e o fim: cresce a cada fase
+const MIDDLE_COUNT_BASE = 14
+const MIDDLE_COUNT_PER_STAGE = 4
+const MIDDLE_COUNT_MAX = 30
+const MAX_TIER = 4
+## Tom do cenário em cada fase (repete em ciclo): noite, madrugada, lua de sangue
+const STAGE_TINTS = [Color(1, 1, 1), Color(0.72, 0.9, 1.15), Color(1.2, 0.68, 0.72)]
 const PLAYER_SCENE = preload("res://scenes/player.tscn")
 const WALKER_SCENE = preload("res://scenes/enemy_walker.tscn")
 const BAT_SCENE = preload("res://scenes/enemy_bat.tscn")
 const SPIKES_SCENE = preload("res://scenes/spikes.tscn")
 const GEM_SCENE = preload("res://scenes/gem.tscn")
 const GOAL_SCENE = preload("res://scenes/goal.tscn")
+const NINJA_SCENE = preload("res://scenes/enemy_ninja.tscn")
+const TOAD_SCENE = preload("res://scenes/enemy_toad.tscn")
+const SAW_SCENE = preload("res://scenes/trap_saw.tscn")
+const SPRING_SCENE = preload("res://scenes/trap_spring.tscn")
+const CRUMBLE_SCENE = preload("res://scenes/trap_crumble.tscn")
+const SHOOTER_SCENE = preload("res://scenes/trap_shooter.tscn")
 const TEX_STONE = preload("res://assets/generated/tile_stone.png")
 const TEX_STONE_TOP = preload("res://assets/generated/tile_stone_top.png")
 
@@ -53,6 +65,8 @@ const DEPTH_TINTS = [Color(1, 1, 1), Color(0.78, 0.78, 0.86), Color(0.58, 0.58, 
 
 ## Seed da próxima fase (-1 = sortear). Sobrevive ao reload da cena.
 static var next_seed: int = -1
+## Fase atual (1, 2, 3...). Sobrevive ao reload da cena.
+static var stage: int = 1
 
 var player: Player
 var level_seed: int = 0
@@ -72,7 +86,7 @@ func _ready() -> void:
 	Engine.time_scale = 1.0
 	tiles.tile_set = _build_tileset()
 	level_seed = _pick_seed()
-	var map: Array = compose_map(level_seed)
+	var map: Array = compose_map(level_seed, stage)
 	_build_level(map)
 	var level_size: Vector2 = Vector2(map[0].length(), map.size()) * TILE
 	_decorate(map)
@@ -84,7 +98,8 @@ func _ready() -> void:
 	player.started.connect(_on_started)
 	player.died.connect(_on_player_died)
 	hud.setup(player.max_health, total_gems)
-	hud.show_message("TOQUE PARA COMEÇAR\n\nPULO: agarra e salta\nentre paredes")
+	_tint_scenery()
+	hud.show_message("FASE %d\n\nTOQUE PARA COMEÇAR\n\nPULO: agarra e salta\nentre paredes" % stage)
 
 
 func _physics_process(delta: float) -> void:
@@ -97,6 +112,9 @@ func _physics_process(delta: float) -> void:
 
 func _pick_seed() -> int:
 	for arg: String in OS.get_cmdline_user_args():
+		if arg.begins_with("--stage="):
+			stage = maxi(1, int(arg.trim_prefix("--stage=")))
+	for arg: String in OS.get_cmdline_user_args():
 		if arg.begins_with("--seed="):
 			return int(arg.trim_prefix("--seed="))
 	if next_seed >= 0:
@@ -105,16 +123,19 @@ func _pick_seed() -> int:
 
 
 ## Sorteia a sequência de blocos e devolve o mapa ASCII completo.
-## O jogador corre da direita para a esquerda, então o INÍCIO fica à direita.
+## O jogador corre da esquerda para a direita: INÍCIO à esquerda, FIM à direita.
 ## Se `spans` for passado, recebe [nome, x_inicial, x_final] de cada bloco (em px).
-static func compose_map(seed_value: int, spans: Array = []) -> Array:
+static func compose_map(seed_value: int, stage_number: int = 1, spans: Array = []) -> Array:
 	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
 	rng.seed = seed_value
+	var count: int = mini(MIDDLE_COUNT_BASE + MIDDLE_COUNT_PER_STAGE * (stage_number - 1), MIDDLE_COUNT_MAX)
 	var sequence: Array = [CHUNKS.START]
 	var last_name: String = ""
-	for i: int in MIDDLE_COUNT:
-		# Dificuldade sobe ao longo da fase: tier 1 no começo, 3 no final
-		var max_tier: int = 1 + int(float(i) / MIDDLE_COUNT * 3.0)
+	for i: int in count:
+		# Dificuldade sobe ao longo da fase e começa mais alta a cada fase:
+		# fase 1 vai do tier 1 ao 3, fase 2 do 2 ao 4, fase 3 em diante do 3 ao 4
+		var first_tier: int = mini(stage_number, MAX_TIER - 1)
+		var max_tier: int = mini(first_tier + int(float(i) / count * 3.0), MAX_TIER)
 		var options: Array = CHUNKS.MIDDLE.filter(func(c: Dictionary) -> bool:
 			return c.tier <= max_tier and c.name != last_name)
 		# Blocos do tier atual aparecem com o dobro de chance
@@ -125,7 +146,6 @@ static func compose_map(seed_value: int, spans: Array = []) -> Array:
 		sequence.append(pick)
 		last_name = pick.name
 	sequence.append(CHUNKS.END)
-	sequence.reverse()
 
 	var map: Array = []
 	map.resize(LEVEL_ROWS)
@@ -141,8 +161,11 @@ static func compose_map(seed_value: int, spans: Array = []) -> Array:
 			var row: String
 			if y < top:
 				row = ".".repeat(width)
+			elif y - top < rows.size():
+				row = rows[y - top]
 			else:
-				row = rows[mini(y - top, rows.size() - 1)]
+				# Abaixo do chão: só blocos maciços continuam até o fundo
+				row = String(rows[-1]).replace("C", ".")
 			assert(row.length() == width, "Bloco '%s' com linhas de larguras diferentes" % chunk.name)
 			map[y] += row
 	for y: int in LEVEL_ROWS:
@@ -219,6 +242,18 @@ func _build_level(map: Array) -> void:
 				"G":
 					var goal: Goal = _spawn(GOAL_SCENE, cell_floor) as Goal
 					goal.reached.connect(_on_goal_reached)
+				"N":
+					_spawn(NINJA_SCENE, cell_floor)
+				"H":
+					_spawn(TOAD_SCENE, cell_floor)
+				"S":
+					_spawn(SAW_SCENE, cell_floor)
+				"J":
+					_spawn(SPRING_SCENE, cell_floor)
+				"C":
+					_spawn(CRUMBLE_SCENE, cell_center)
+				"D":
+					_spawn(SHOOTER_SCENE, cell_center)
 	assert(player != null, "O mapa precisa de um 'P' (início do jogador)")
 	entities.add_child(player)
 
@@ -288,6 +323,12 @@ func _spawn(scene: PackedScene, pos: Vector2) -> Node2D:
 	return n
 
 
+func _tint_scenery() -> void:
+	var tint: Color = STAGE_TINTS[(stage - 1) % STAGE_TINTS.size()]
+	for layer: String in ["Sky/TextureRect", "Mountains", "Mid", "Near"]:
+		(get_node(layer) as CanvasItem).modulate = tint
+
+
 func _setup_camera(level_size: Vector2) -> void:
 	var cam: Camera2D = player.camera
 	cam.limit_left = 0
@@ -317,7 +358,11 @@ func _on_goal_reached() -> void:
 	_running = false
 	player.freeze()
 	next_seed = -1
-	hud.show_message("FASE COMPLETA!\n\nGemas: %d / %d\nTempo: %s\n\nToque para jogar de novo" % [
-		player.gems, total_gems, HUD.format_time(elapsed)])
+	hud.show_message("FASE %d COMPLETA!\n\nGemas: %d / %d\nTempo: %s\n\nPróxima: FASE %d" % [
+		stage, player.gems, total_gems, HUD.format_time(elapsed), stage + 1])
+	stage += 1
 	await get_tree().create_timer(1.0).timeout
 	_can_restart = true
+	# Segue sozinho para a próxima fase se ninguém tocar
+	await get_tree().create_timer(2.5).timeout
+	get_tree().reload_current_scene()

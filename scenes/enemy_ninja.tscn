@@ -1,0 +1,51 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/enemy_ninja.gd" id="1_script"]
+[ext_resource type="Texture2D" path="res://assets/generated/enemy_ninja.png" id="2_tex"]
+[ext_resource type="Shader" path="res://shaders/outline.gdshader" id="3_outline"]
+
+[sub_resource type="ShaderMaterial" id="Mat_outline"]
+shader = ExtResource("3_outline")
+shader_parameter/outline_color = Color(1, 0.55, 0.2, 1)
+
+[sub_resource type="AtlasTexture" id="Atlas_0"]
+atlas = ExtResource("2_tex")
+region = Rect2(0, 0, 34, 27)
+
+[sub_resource type="AtlasTexture" id="Atlas_1"]
+atlas = ExtResource("2_tex")
+region = Rect2(34, 0, 34, 27)
+
+[sub_resource type="SpriteFrames" id="Frames"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("Atlas_0")
+}, {
+"duration": 1.0,
+"texture": SubResource("Atlas_1")
+}],
+"loop": false,
+"name": &"default",
+"speed": 0.0
+}]
+
+[sub_resource type="RectangleShape2D" id="Shape_hurt"]
+size = Vector2(14, 24)
+
+[node name="EnemyNinja" type="Node2D"]
+script = ExtResource("1_script")
+
+[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="."]
+material = SubResource("Mat_outline")
+position = Vector2(0, -14)
+sprite_frames = SubResource("Frames")
+
+[node name="Hurtbox" type="Area2D" parent="."]
+collision_layer = 4
+collision_mask = 0
+monitoring = false
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Hurtbox"]
+position = Vector2(0, -12)
+shape = SubResource("Shape_hurt")
