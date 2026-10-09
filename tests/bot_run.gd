@@ -129,7 +129,12 @@ func _wants_jump() -> bool:
 			var to_spring: float = (n.global_position.x - player.global_position.x) * f
 			if to_spring > -4.0 and to_spring < 40.0:
 				return false  # a mola vai lançar por cima do que vem depois
-		if n.scene_file_path.ends_with("spikes.tscn"):
+		if n is EnemyBoar and not n.dead:
+			var bdx: float = (n.global_position.x - player.global_position.x) * f
+			if bdx > 0.0 and bdx < 40.0 and absf(n.velocity.x) > 50.0:
+				return true  # javali em investida: pula por cima
+		if n.scene_file_path.ends_with("spikes.tscn") or n.scene_file_path.ends_with("trap_popspikes.tscn") \
+				or n.scene_file_path.ends_with("trap_fire.tscn"):
 			var dx: float = (n.global_position.x - player.global_position.x) * f
 			if dx > 0.0 and dx < 26.0 and absf(n.global_position.y - player.global_position.y) < 20.0:
 				return true
@@ -145,8 +150,11 @@ func _floor_at(x: float) -> bool:
 
 func _enemy_ahead() -> bool:
 	for n: Node in level.entities.get_children():
-		if (n is EnemyWalker or n is EnemyBat or n is EnemyNinja or n is EnemyToad or n is Projectile) and not n.dead:
-			var d: Vector2 = (n as Node2D).global_position - player.global_position
+		if (n is EnemyWalker or n is EnemyBat or n is EnemyNinja or n is EnemyToad or n is Projectile
+				or n is EnemyBoar or n is EnemySnake or n is EnemySwordNinja or n is Stalactite
+				or n is EnemySpider) and not n.dead:
+			var target: Node2D = n.get_node("Body") if n is EnemySpider else n
+			var d: Vector2 = target.global_position - player.global_position
 			if d.x * player.facing > -6.0 and absf(d.x) < ATTACK_RANGE and absf(d.y + 10.0) < 34.0:
 				return true
 	return false
