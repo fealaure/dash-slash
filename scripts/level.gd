@@ -1,10 +1,17 @@
 class_name Level
 extends Node2D
-## Constrói a fase a partir do mapa ASCII (res://levels/level_01.gd),
-## gerencia início, morte, vitória e reinício.
+## Monta a fase sorteando blocos ASCII (res://levels/chunks.gd) a partir de
+## uma seed, gerencia início, morte, vitória e reinício.
+## Morrer repete a mesma fase; completar sorteia uma nova.
+## Seed fixa para testes: godot --path . -- --seed=123
 
 const TILE = 16
-const LEVEL_DATA = preload("res://levels/level_01.gd")
+const CHUNKS = preload("res://levels/chunks.gd")
+## Altura da fase em tiles (40 x 16 px = altura da tela) e linha do chão
+const LEVEL_ROWS = 40
+const GROUND_ROW = 34
+## Quantos blocos sorteados entre o início e o fim
+const MIDDLE_COUNT = 10
 const PLAYER_SCENE = preload("res://scenes/player.tscn")
 const WALKER_SCENE = preload("res://scenes/enemy_walker.tscn")
 const BAT_SCENE = preload("res://scenes/enemy_bat.tscn")
@@ -17,7 +24,11 @@ const TEX_STONE_TOP = preload("res://assets/generated/tile_stone_top.png")
 const SRC_STONE = 0
 const SRC_STONE_TOP = 1
 
+## Seed da próxima fase (-1 = sortear). Sobrevive ao reload da cena.
+static var next_seed: int = -1
+
 var player: Player
+var level_seed: int = 0
 var total_gems: int = 0
 var elapsed: float = 0.0
 var _running: bool = false
@@ -32,7 +43,8 @@ var _can_restart: bool = false
 func _ready() -> void:
 	Engine.time_scale = 1.0
 	tiles.tile_set = _build_tileset()
-	var map: Array = LEVEL_DATA.MAP
+	level_seed = _pick_seed()
+	var map: Array = compose_map(level_seed)
 	_build_level(map)
 	var level_size: Vector2 = Vector2(map[0].length(), map.size()) * TILE
 	_setup_camera(level_size)
@@ -51,6 +63,61 @@ func _physics_process(delta: float) -> void:
 		hud.set_time(elapsed)
 	if _can_restart and (Input.is_action_just_pressed("jump") or Input.is_action_just_pressed("attack")):
 		get_tree().reload_current_scene()
+
+
+func _pick_seed() -> int:
+	for arg: String in OS.get_cmdline_user_args():
+		if arg.begins_with("--seed="):
+			return int(arg.trim_prefix("--seed="))
+	if next_seed >= 0:
+		return next_seed
+	return randi() % 1000000
+
+
+## Sorteia a sequência de blocos e devolve o mapa ASCII completo.
+## O jogador corre da direita para a esquerda, então o INÍCIO fica à direita.
+## Se `spans` for passado, recebe [nome, x_inicial, x_final] de cada bloco (em px).
+static func compose_map(seed_value: int, spans: Array = []) -> Array:
+	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
+	rng.seed = seed_value
+	var sequence: Array = [CHUNKS.START]
+	var last_name: String = ""
+	for i: int in MIDDLE_COUNT:
+		# Dificuldade sobe ao longo da fase: tier 1 no começo, 3 no final
+		var max_tier: int = 1 + int(float(i) / MIDDLE_COUNT * 3.0)
+		var options: Array = CHUNKS.MIDDLE.filter(func(c: Dictionary) -> bool:
+			return c.tier <= max_tier and c.name != last_name)
+		# Blocos do tier atual aparecem com o dobro de chance
+		var weights: PackedFloat32Array = PackedFloat32Array()
+		for c: Dictionary in options:
+			weights.append(2.0 if c.tier == max_tier else 1.0)
+		var pick: Dictionary = options[rng.rand_weighted(weights)]
+		sequence.append(pick)
+		last_name = pick.name
+	sequence.append(CHUNKS.END)
+	sequence.reverse()
+
+	var map: Array = []
+	map.resize(LEVEL_ROWS)
+	map.fill("#")  # parede na borda esquerda
+	for chunk: Dictionary in sequence:
+		var rows: Array = chunk.rows
+		var width: int = String(rows[0]).length()
+		var x0: int = String(map[0]).length()
+		spans.append([chunk.name, x0 * TILE, (x0 + width) * TILE])
+		var top: int = GROUND_ROW - (rows.size() - 1)
+		assert(top >= 0, "Bloco '%s' alto demais" % chunk.name)
+		for y: int in LEVEL_ROWS:
+			var row: String
+			if y < top:
+				row = ".".repeat(width)
+			else:
+				row = rows[mini(y - top, rows.size() - 1)]
+			assert(row.length() == width, "Bloco '%s' com linhas de larguras diferentes" % chunk.name)
+			map[y] += row
+	for y: int in LEVEL_ROWS:
+		map[y] += "#"  # parede na borda direita
+	return map
 
 
 func _build_tileset() -> TileSet:
@@ -128,6 +195,7 @@ func _on_started() -> void:
 
 func _on_player_died() -> void:
 	_running = false
+	next_seed = level_seed
 	hud.show_message("VOCÊ MORREU")
 	await get_tree().create_timer(1.6).timeout
 	get_tree().reload_current_scene()
@@ -139,6 +207,7 @@ func _on_goal_reached() -> void:
 	_finished = true
 	_running = false
 	player.freeze()
+	next_seed = -1
 	hud.show_message("FASE COMPLETA!\n\nGemas: %d / %d\nTempo: %s\n\nToque para jogar de novo" % [
 		player.gems, total_gems, HUD.format_time(elapsed)])
 	await get_tree().create_timer(1.0).timeout
