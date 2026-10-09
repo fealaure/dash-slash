@@ -1,9 +1,10 @@
 extends Node
 ## Teste automático: um bot joga a fase sorteada e diz se chegou ao portal.
 ## Prova que os blocos encaixados são atravessáveis com a física atual.
-## Uso: godot --headless --fixed-fps 60 --path . res://tests/bot_run.tscn -- --seed=7
+## Uso: godot --headless --fixed-fps 60 --path . res://tests/bot_run.tscn -- --seed=7 --stage=1
 ## Saída: uma linha "BOT seed=<n> result=PASS|FAIL ..." e exit code 0/1.
 ## Capturas de tela (sem --headless): BOT_SHOTS=3,10,25 salva user://shot_<s>.png
+## BOT_CONTINUE=1: não para no portal; confere que a fase seguinte começa.
 
 const MAIN_SCENE = preload("res://scenes/main.tscn")
 const TIME_LIMIT = 240.0
@@ -16,12 +17,19 @@ var _released_frames: int = 0
 var _held_frames: int = 0
 var _game_time: float = 0.0
 var _shots: Array = []
+## Detecta soldado "tremendo" (virando várias vezes em meio segundo)
+var _walker_turns: Dictionary = {}  # instance_id -> [direção, frames das viradas]
+var _jitter: int = 0
 
 
 func _ready() -> void:
 	level = MAIN_SCENE.instantiate()
 	add_child(level)
 	player = level.player
+	if OS.has_environment("BOT_CONTINUE") and Level.stage > 1:
+		print("BOT iniciou fase=%d seed=%d" % [Level.stage, level.level_seed])
+		get_tree().quit(0)
+		return
 	for t: String in OS.get_environment("BOT_SHOTS").split(",", false):
 		_shots.append(float(t))
 	player.health_changed.connect(func(h: int, _m: int) -> void:
@@ -30,11 +38,17 @@ func _ready() -> void:
 	player.died.connect(func() -> void: _finish(false, "morreu"))
 	for goal: Node in level.entities.get_children():
 		if goal is Goal:
-			goal.reached.connect(func() -> void: _finish(true, "portal"))
+			goal.reached.connect(func() -> void:
+				if OS.has_environment("BOT_CONTINUE"):
+					print("BOT completou fase=%d, aguardando a próxima" % (Level.stage - 1))
+					_game_time = -1000.0
+				else:
+					_finish(true, "portal"))
 
 
 func _physics_process(delta: float) -> void:
 	_game_time += delta
+	_watch_walkers()
 	if not _shots.is_empty() and _game_time >= _shots[0]:
 		var path: String = "user://shot_%d.png" % int(_shots.pop_front())
 		get_viewport().get_texture().get_image().save_png(path)
@@ -46,6 +60,8 @@ func _physics_process(delta: float) -> void:
 	if not player.active:
 		_send("jump", true)
 		return
+	if not _jump_held and Input.is_action_pressed("jump"):
+		_send("jump", false)  # solta o toque que iniciou a partida
 	if _jump_held:
 		_held_frames += 1
 		# Segura o pulo até o topo para não cortar a altura
@@ -77,6 +93,21 @@ func _send(action: String, pressed: bool) -> void:
 	Input.parse_input_event(ev)
 
 
+func _watch_walkers() -> void:
+	var frame: int = Engine.get_physics_frames()
+	for n: Node in level.entities.get_children():
+		if n is EnemyWalker:
+			var w: EnemyWalker = n
+			var rec: Array = _walker_turns.get(w.get_instance_id(), [w.direction, []])
+			if w.direction != rec[0]:
+				rec[0] = w.direction
+				rec[1].append(frame)
+				rec[1] = rec[1].filter(func(f: int) -> bool: return frame - f < 30)
+				if rec[1].size() >= 3:
+					_jitter += 1
+			_walker_turns[w.get_instance_id()] = rec
+
+
 func _wants_jump() -> bool:
 	if player.get("_clinging"):
 		return true
@@ -88,6 +119,16 @@ func _wants_jump() -> bool:
 	if not _floor_at(player.global_position.x + f * 5.0):
 		return true  # beirada (fosso, espinhos ou degrau para baixo)
 	for n: Node in level.entities.get_children():
+		if n.scene_file_path.ends_with("trap_saw.tscn"):
+			# Serra baixa à frente: pula; alta: passa por baixo
+			var saw: Node2D = n.get_node("Sprite2D")
+			var ahead: float = (saw.global_position.x - player.global_position.x) * f
+			if ahead > 0.0 and ahead < 30.0 and saw.global_position.y > player.global_position.y - 30.0:
+				return true
+		if n.scene_file_path.ends_with("trap_spring.tscn"):
+			var to_spring: float = (n.global_position.x - player.global_position.x) * f
+			if to_spring > -4.0 and to_spring < 40.0:
+				return false  # a mola vai lançar por cima do que vem depois
 		if n.scene_file_path.ends_with("spikes.tscn"):
 			var dx: float = (n.global_position.x - player.global_position.x) * f
 			if dx > 0.0 and dx < 26.0 and absf(n.global_position.y - player.global_position.y) < 20.0:
@@ -104,7 +145,7 @@ func _floor_at(x: float) -> bool:
 
 func _enemy_ahead() -> bool:
 	for n: Node in level.entities.get_children():
-		if (n is EnemyWalker or n is EnemyBat) and not n.dead:
+		if (n is EnemyWalker or n is EnemyBat or n is EnemyNinja or n is EnemyToad or n is Projectile) and not n.dead:
 			var d: Vector2 = (n as Node2D).global_position - player.global_position
 			if d.x * player.facing > -6.0 and absf(d.x) < ATTACK_RANGE and absf(d.y + 10.0) < 34.0:
 				return true
@@ -113,7 +154,7 @@ func _enemy_ahead() -> bool:
 
 func _chunk_at(x: float) -> String:
 	var spans: Array = []
-	Level.compose_map(level.level_seed, spans)
+	Level.compose_map(level.level_seed, Level.stage, spans)
 	for sp: Array in spans:
 		if x >= sp[1] and x < sp[2]:
 			return "%s(+%d)" % [sp[0], int(x - sp[1])]
@@ -121,11 +162,15 @@ func _chunk_at(x: float) -> String:
 
 
 func _finish(ok: bool, reason: String) -> void:
+	var stage_played: int = Level.stage - (1 if ok else 0)
 	if not ok:
 		var fell: bool = player.global_position.y > player.death_y
 		reason += " caiu" if fell else " dano"
 		reason += " bloco=" + _chunk_at(player.global_position.x)
-	print("BOT seed=%d result=%s motivo=%s x=%d/%d tempo=%.1fs vida=%d" % [
-		level.level_seed, "PASS" if ok else "FAIL", reason, int(player.global_position.x),
+	if _jitter > 0:
+		ok = false
+		reason = "soldado tremendo (%d)" % _jitter
+	print("BOT fase=%d seed=%d result=%s motivo=%s x=%d/%d tempo=%.1fs vida=%d" % [
+		stage_played, level.level_seed, "PASS" if ok else "FAIL", reason, int(player.global_position.x),
 		level.player.camera.limit_right, _game_time, player.health])
 	get_tree().quit(0 if ok else 1)
