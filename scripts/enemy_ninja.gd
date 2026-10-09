@@ -1,6 +1,8 @@
 class_name EnemyNinja
 extends Node2D
-## Ninja inimigo parado que arremessa shurikens quando o jogador se aproxima.
+## Ninja inimigo parado que arremessa shurikens quando o jogador se aproxima
+## pela frente. Depois que o jogador passa por ele, não arremessa mais: o
+## jogador não pode virar, então seria dano inevitável.
 ## Morre com 1 golpe; a shuriken também pode ser rebatida com a espada.
 
 const SHURIKEN_SCENE = preload("res://scenes/shuriken.tscn")
@@ -28,7 +30,7 @@ func _physics_process(delta: float) -> void:
 	var d: Vector2 = player.global_position - global_position
 	var face: float = signf(d.x) if d.x != 0.0 else -1.0
 	sprite.flip_h = face < 0.0
-	if _cooldown <= 0.0 and absf(d.x) < SIGHT.x and absf(d.y) < SIGHT.y:
+	if _cooldown <= 0.0 and d.x < 0.0 and -d.x < SIGHT.x and absf(d.y) < SIGHT.y:
 		_cooldown = COOLDOWN
 		_pose = 0.3
 		var s: Projectile = SHURIKEN_SCENE.instantiate()

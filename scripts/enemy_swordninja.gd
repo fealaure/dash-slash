@@ -1,7 +1,8 @@
 class_name EnemySwordNinja
 extends CharacterBody2D
-## Ninja espadachim: corre na direção do jogador, ergue a espada (aviso) e
-## avança cortando. Aguenta 2 golpes; recua um pouco quando é atingido.
+## Ninja espadachim: corre na direção do jogador que vem pela frente, ergue a
+## espada (aviso) e avança cortando. Não ataca pelas costas de quem já passou.
+## Aguenta 2 golpes; recua um pouco quando é atingido.
 
 const GRAVITY = 1000.0
 const SPEED = 85.0
@@ -58,7 +59,9 @@ func _physics_process(delta: float) -> void:
 		var d: Vector2 = player.global_position - global_position
 		_face = signf(d.x) if d.x != 0.0 else _face
 		velocity.x = 0.0
-		if absf(d.x) < SWING_RANGE and absf(d.y) < SIGHT.y:
+		if d.x > 4.0:
+			pass  # o jogador já passou: fica parado
+		elif absf(d.x) < SWING_RANGE and absf(d.y) < SIGHT.y:
 			_state = 1
 			_timer = WINDUP
 			anim = "windup"

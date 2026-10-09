@@ -1,6 +1,7 @@
 class_name EnemySnake
 extends Node2D
-## Cobra peçonhenta enrolada no chão: dá o bote quando o jogador chega perto.
+## Cobra peçonhenta enrolada no chão: dá o bote quando o jogador chega perto
+## pela frente (nunca nas costas de quem já passou).
 
 const STRIKE_RANGE = 60.0
 const STRIKE_TIME = 0.35
@@ -27,7 +28,7 @@ func _physics_process(delta: float) -> void:
 	if player != null and _strike <= 0.0:
 		var d: Vector2 = player.global_position - global_position
 		_face = signf(d.x) if d.x != 0.0 else _face
-		if _cooldown <= 0.0 and absf(d.x) < STRIKE_RANGE and absf(d.y) < 30.0:
+		if _cooldown <= 0.0 and d.x < 0.0 and -d.x < STRIKE_RANGE and absf(d.y) < 30.0:
 			_strike = STRIKE_TIME
 			_cooldown = COOLDOWN
 	var striking: bool = _strike > 0.0
