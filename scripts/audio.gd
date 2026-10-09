@@ -15,10 +15,14 @@ var _variants: Dictionary = {}  # nome -> Array[AudioStream]
 var _players: Array[AudioStreamPlayer] = []
 var _next: int = 0
 var _music: AudioStreamPlayer
+## Sem janela (testes automáticos) o driver de áudio é falso e nunca libera o
+## que toca: só registramos a faixa, sem tocar.
+var _silent: bool = false
 
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	_silent = DisplayServer.get_name() == "headless"
 	for i: int in VOICES:
 		var p: AudioStreamPlayer = AudioStreamPlayer.new()
 		add_child(p)
@@ -26,9 +30,39 @@ func _ready() -> void:
 	_music = AudioStreamPlayer.new()
 	_music.volume_db = -10.0
 	add_child(_music)
+	_ready_quit_hook()
+
+
+func _ready_quit_hook() -> void:
+	get_tree().auto_accept_quit = false
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_CLOSE_REQUEST:
+		quit_cleanly()
+
+
+## Fecha o jogo depois de parar o som. Se fechar com som tocando, o servidor
+## de áudio ainda segura as faixas e o Godot acusa recursos vazados na saída.
+func quit_cleanly(exit_code: int = 0) -> void:
+	get_tree().paused = true  # nada mais toca som enquanto o mixer esvazia
+	stop_all()
+	await get_tree().create_timer(0.3, true, false, true).timeout
+	get_tree().quit(exit_code)
+
+
+func stop_all() -> void:
+	for p: AudioStreamPlayer in _players:
+		p.stop()
+		p.stream = null
+	_music.stop()
+	_music.stream = null
+	_variants.clear()
 
 
 func play(sfx: String) -> void:
+	if _silent:
+		return
 	var streams: Array = _load_variants(sfx)
 	if streams.is_empty():
 		return
@@ -50,7 +84,8 @@ func play_music(stage: int) -> void:
 	var stream: AudioStreamOggVorbis = load(path)
 	stream.loop = true
 	_music.stream = stream
-	_music.play()
+	if not _silent:
+		_music.play()
 
 
 func _load_variants(sfx: String) -> Array:
