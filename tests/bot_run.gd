@@ -5,6 +5,7 @@ extends Node
 ## Saída: uma linha "BOT seed=<n> result=PASS|FAIL ..." e exit code 0/1.
 ## Capturas de tela (sem --headless): BOT_SHOTS=3,10,25 salva user://shot_<s>.png
 ## BOT_CONTINUE=1: não para no portal; confere que a fase seguinte começa.
+## BOT_SHOT_CHUNK=dojo: captura 4 telas seguidas ao entrar nesse bloco.
 
 const MAIN_SCENE = preload("res://scenes/main.tscn")
 const TIME_LIMIT = 240.0
@@ -17,6 +18,8 @@ var _released_frames: int = 0
 var _held_frames: int = 0
 var _game_time: float = 0.0
 var _shots: Array = []
+var _chunk_spans: Array = []
+var _chunk_shots: int = 0
 ## Detecta soldado "tremendo" (virando várias vezes em meio segundo)
 var _walker_turns: Dictionary = {}  # instance_id -> [direção, frames das viradas]
 var _jitter: int = 0
@@ -49,6 +52,7 @@ func _ready() -> void:
 func _physics_process(delta: float) -> void:
 	_game_time += delta
 	_watch_walkers()
+	_shoot_chunk()
 	if not _shots.is_empty() and _game_time >= _shots[0]:
 		var path: String = "user://shot_%d.png" % int(_shots.pop_front())
 		get_viewport().get_texture().get_image().save_png(path)
@@ -91,6 +95,21 @@ func _send(action: String, pressed: bool) -> void:
 	ev.action = action
 	ev.pressed = pressed
 	Input.parse_input_event(ev)
+
+
+func _shoot_chunk() -> void:
+	var want: String = OS.get_environment("BOT_SHOT_CHUNK")
+	if want == "" or _chunk_shots >= 4:
+		return
+	if _chunk_spans.is_empty():
+		Level.compose_map(level.level_seed, Level.stage, _chunk_spans)
+	for sp: Array in _chunk_spans:
+		if sp[0] == want and player.global_position.x > sp[1] + 60 and Engine.get_physics_frames() % 12 == 0:
+			var path: String = "user://chunk_%s_%d.png" % [want, _chunk_shots]
+			get_viewport().get_texture().get_image().save_png(path)
+			print("  captura ", ProjectSettings.globalize_path(path))
+			_chunk_shots += 1
+			return
 
 
 func _watch_walkers() -> void:
