@@ -173,7 +173,8 @@ func _try_attack() -> void:
 	_attack_dir = -_wall_dir if _clinging else facing
 	sword_shape.position.x = 18.0 * _attack_dir
 	slash_fx.position.x = 18.0 * _attack_dir
-	slash_fx.flip_h = _attack_dir < 0
+	# A arte do slash_fx foi desenhada golpeando para a esquerda
+	slash_fx.flip_h = _attack_dir > 0
 	slash_fx.visible = true
 	slash_fx.modulate.a = 1.0
 	sprite.play("slash")
