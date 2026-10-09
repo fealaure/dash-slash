@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://cwa4ccukvf7h4"
-path="res://.godot/imported/bg_night.png-32ea0a8a9f21d1e4f706a55e6531899f.ctex"
+uid="uid://ctqlpddl6xa5a"
+path="res://.godot/imported/stone_moss.png-e6433a1fa4b014359ec2f9b1565b3d7d.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/generated/bg_night.png"
-dest_files=["res://.godot/imported/bg_night.png-32ea0a8a9f21d1e4f706a55e6531899f.ctex"]
+source_file="res://assets/generated/props/stone_moss.png"
+dest_files=["res://.godot/imported/stone_moss.png-e6433a1fa4b014359ec2f9b1565b3d7d.ctex"]
 
 [params]
 

@@ -1,23 +1,56 @@
 [gd_scene format=3 uid="uid://6rls346f3i0l"]
 
 [ext_resource type="Script" uid="uid://dlih16cp5e7q8" path="res://scripts/level.gd" id="1_level"]
-[ext_resource type="Texture2D" uid="uid://cwa4ccukvf7h4" path="res://assets/generated/bg_night.png" id="2_bg"]
+[ext_resource type="Texture2D" path="res://assets/generated/bg_sky.png" id="2_sky"]
+[ext_resource type="Texture2D" path="res://assets/generated/bg_mountains.png" id="4_mountains"]
+[ext_resource type="Texture2D" path="res://assets/generated/bg_mid.png" id="5_mid"]
+[ext_resource type="Texture2D" path="res://assets/generated/bg_near.png" id="6_near"]
 [ext_resource type="PackedScene" path="res://scenes/hud.tscn" id="3_hud"]
 
 [node name="Main" type="Node2D" unique_id=476641215]
 script = ExtResource("1_level")
 
-[node name="Background" type="Parallax2D" parent="." unique_id=750838949]
-scroll_scale = Vector2(0.1, 0)
-repeat_size = Vector2(450, 0)
+[node name="Sky" type="Parallax2D" parent="."]
+scroll_scale = Vector2(0, 0)
+
+[node name="Sprite2D" type="Sprite2D" parent="Sky"]
+texture = ExtResource("2_sky")
+centered = false
+
+[node name="Mountains" type="Parallax2D" parent="."]
+scroll_scale = Vector2(0.12, 0.04)
+scroll_offset = Vector2(0, 215)
+repeat_size = Vector2(976, 0)
 repeat_times = 3
 
-[node name="Sprite2D" type="Sprite2D" parent="Background" unique_id=1519807399]
-scale = Vector2(1.25, 1.25)
-texture = ExtResource("2_bg")
+[node name="Sprite2D" type="Sprite2D" parent="Mountains"]
+texture = ExtResource("4_mountains")
+centered = false
+
+[node name="Mid" type="Parallax2D" parent="."]
+scroll_scale = Vector2(0.3, 0.1)
+scroll_offset = Vector2(0, 250)
+repeat_size = Vector2(976, 0)
+repeat_times = 3
+
+[node name="Sprite2D" type="Sprite2D" parent="Mid"]
+texture = ExtResource("5_mid")
+centered = false
+
+[node name="Near" type="Parallax2D" parent="."]
+scroll_scale = Vector2(0.55, 0.2)
+scroll_offset = Vector2(0, 300)
+repeat_size = Vector2(976, 0)
+repeat_times = 3
+
+[node name="Sprite2D" type="Sprite2D" parent="Near"]
+modulate = Color(0.75, 0.75, 0.85, 1)
+texture = ExtResource("6_near")
 centered = false
 
 [node name="TileMapLayer" type="TileMapLayer" parent="." unique_id=255794862]
+
+[node name="Decor" type="Node2D" parent="."]
 
 [node name="Entities" type="Node2D" parent="." unique_id=818609780]
 

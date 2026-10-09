@@ -7,8 +7,9 @@ extends Node2D
 
 const TILE = 16
 const CHUNKS = preload("res://levels/chunks.gd")
-## Altura da fase em tiles (40 x 16 px = altura da tela) e linha do chão
-const LEVEL_ROWS = 40
+## Altura da fase em tiles e linha do chão. Sobra chão abaixo para a câmera
+## manter o jogador no meio da tela, acima dos botões de toque.
+const LEVEL_ROWS = 52
 const GROUND_ROW = 34
 ## Quantos blocos sorteados entre o início e o fim
 const MIDDLE_COUNT = 10
@@ -21,8 +22,34 @@ const GOAL_SCENE = preload("res://scenes/goal.tscn")
 const TEX_STONE = preload("res://assets/generated/tile_stone.png")
 const TEX_STONE_TOP = preload("res://assets/generated/tile_stone_top.png")
 
+## Enfeites espalhados sobre o chão: [textura, peso do sorteio]
+const DECOR = [
+	[preload("res://assets/generated/props/grass_a.png"), 10.0],
+	[preload("res://assets/generated/props/grass_b.png"), 10.0],
+	[preload("res://assets/generated/props/grass_c.png"), 8.0],
+	[preload("res://assets/generated/props/flowers.png"), 4.0],
+	[preload("res://assets/generated/props/stone_moss.png"), 4.0],
+	[preload("res://assets/generated/props/rock.png"), 3.0],
+	[preload("res://assets/generated/props/shoot_a.png"), 4.0],
+	[preload("res://assets/generated/props/shoot_b.png"), 3.0],
+	[preload("res://assets/generated/props/shoot_c.png"), 3.0],
+	[preload("res://assets/generated/props/shoot_d.png"), 3.0],
+	[preload("res://assets/generated/props/mushroom.png"), 2.0],
+	[preload("res://assets/generated/props/fence.png"), 1.5],
+	[preload("res://assets/generated/props/fence_broken.png"), 1.5],
+	[preload("res://assets/generated/props/lantern.png"), 1.0],
+	[preload("res://assets/generated/props/skull.png"), 1.0],
+]
+const DECOR_CHANCE = 0.55
+## Raízes penduradas sob plataformas (grama virada de cabeça para baixo)
+const ROOTS_CHANCE = 0.3
+
 const SRC_STONE = 0
 const SRC_STONE_TOP = 1
+## Variações de cada tile (alternative tiles): 4 orientações x 3 faixas de
+## profundidade, para o chão não parecer carimbado e escurecer ao descer.
+const ORIENTATIONS = 4
+const DEPTH_TINTS = [Color(1, 1, 1), Color(0.78, 0.78, 0.86), Color(0.58, 0.58, 0.7)]
 
 ## Seed da próxima fase (-1 = sortear). Sobrevive ao reload da cena.
 static var next_seed: int = -1
@@ -37,6 +64,7 @@ var _can_restart: bool = false
 
 @onready var tiles: TileMapLayer = $TileMapLayer
 @onready var entities: Node2D = $Entities
+@onready var decor: Node2D = $Decor
 @onready var hud: HUD = $HUD
 
 
@@ -47,6 +75,8 @@ func _ready() -> void:
 	var map: Array = compose_map(level_seed)
 	_build_level(map)
 	var level_size: Vector2 = Vector2(map[0].length(), map.size()) * TILE
+	_decorate(map)
+	_add_fireflies(level_size)
 	_setup_camera(level_size)
 	player.death_y = level_size.y + 32.0
 	player.health_changed.connect(hud.set_health)
@@ -136,10 +166,30 @@ func _build_tileset() -> TileSet:
 		src.texture_region_size = Vector2i(TILE, TILE)
 		ts.add_source(src, i)
 		src.create_tile(Vector2i.ZERO)
-		var data: TileData = src.get_tile_data(Vector2i.ZERO, 0)
-		data.add_collision_polygon(0)
-		data.set_collision_polygon_points(0, 0, square)
+		for band: int in DEPTH_TINTS.size():
+			for o: int in ORIENTATIONS:
+				var alt: int = band * ORIENTATIONS + o
+				if alt > 0:
+					src.create_alternative_tile(Vector2i.ZERO, alt)
+				var data: TileData = src.get_tile_data(Vector2i.ZERO, alt)
+				# O tile de topo tem grama em cima: só pode espelhar na horizontal
+				data.flip_h = o % 2 == 1
+				data.flip_v = o >= 2 and i == SRC_STONE
+				data.modulate = DEPTH_TINTS[band]
+				data.add_collision_polygon(0)
+				data.set_collision_polygon_points(0, 0, square)
 	return ts
+
+
+## Escolhe a variação do bloco em (x, y): orientação "aleatória" fixa pela
+## posição e tom mais escuro quanto mais fundo no chão.
+static func _stone_alt(map: Array, x: int, y: int) -> int:
+	var depth: int = 0
+	while y - depth - 1 >= 0 and depth < 8 and String(map[y - depth - 1])[x] == "#":
+		depth += 1
+	var band: int = 0 if depth < 3 else (1 if depth < 6 else 2)
+	var h: int = absi((x * 73856093) ^ (y * 19349663))
+	return band * ORIENTATIONS + h % ORIENTATIONS
 
 
 func _build_level(map: Array) -> void:
@@ -152,7 +202,8 @@ func _build_level(map: Array) -> void:
 			match c:
 				"#":
 					var above_solid: bool = y > 0 and String(map[y - 1])[x] == "#"
-					tiles.set_cell(Vector2i(x, y), SRC_STONE if above_solid else SRC_STONE_TOP, Vector2i.ZERO)
+					tiles.set_cell(Vector2i(x, y), SRC_STONE if above_solid else SRC_STONE_TOP,
+						Vector2i.ZERO, _stone_alt(map, x, y))
 				"P":
 					player = PLAYER_SCENE.instantiate()
 					player.position = cell_floor
@@ -170,6 +221,64 @@ func _build_level(map: Array) -> void:
 					goal.reached.connect(_on_goal_reached)
 	assert(player != null, "O mapa precisa de um 'P' (início do jogador)")
 	entities.add_child(player)
+
+
+func _decorate(map: Array) -> void:
+	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
+	rng.seed = level_seed + 1
+	var weights: PackedFloat32Array = PackedFloat32Array()
+	for d: Array in DECOR:
+		weights.append(d[1])
+	for y: int in range(1, map.size() - 1):
+		for x: int in String(map[y]).length():
+			if String(map[y])[x] != "#":
+				continue
+			var above: String = String(map[y - 1])[x]
+			var below: String = String(map[y + 1])[x]
+			if above == "." and rng.randf() < DECOR_CHANCE:
+				var tex: Texture2D = DECOR[rng.rand_weighted(weights)][0]
+				_add_decor(tex, Vector2(x * TILE + TILE * 0.5 + rng.randf_range(-4.0, 4.0),
+					y * TILE - tex.get_height() * 0.5), rng.randf() < 0.5, false)
+			elif below == "." and above == "#" and rng.randf() < ROOTS_CHANCE:
+				var roots: Texture2D = DECOR[rng.randi_range(0, 2)][0]
+				var s: Sprite2D = _add_decor(roots, Vector2(x * TILE + TILE * 0.5,
+					(y + 1) * TILE + roots.get_height() * 0.5), rng.randf() < 0.5, true)
+				s.modulate = Color(0.55, 0.6, 0.75)
+
+
+func _add_decor(tex: Texture2D, pos: Vector2, flip_h: bool, flip_v: bool) -> Sprite2D:
+	var s: Sprite2D = Sprite2D.new()
+	s.texture = tex
+	s.position = pos.round()
+	s.flip_h = flip_h
+	s.flip_v = flip_v
+	decor.add_child(s)
+	return s
+
+
+## Vaga-lumes flutuando pela fase toda
+func _add_fireflies(level_size: Vector2) -> void:
+	var p: CPUParticles2D = CPUParticles2D.new()
+	p.amount = int(level_size.x / 40.0)
+	p.lifetime = 6.0
+	p.preprocess = 6.0
+	p.emission_shape = CPUParticles2D.EMISSION_SHAPE_RECTANGLE
+	p.emission_rect_extents = Vector2(level_size.x * 0.5, GROUND_ROW * TILE * 0.35)
+	p.position = Vector2(level_size.x * 0.5, GROUND_ROW * TILE * 0.62)
+	p.direction = Vector2.UP
+	p.spread = 180.0
+	p.gravity = Vector2.ZERO
+	p.initial_velocity_min = 3.0
+	p.initial_velocity_max = 10.0
+	p.scale_amount_min = 1.0
+	p.scale_amount_max = 2.0
+	var fade: Gradient = Gradient.new()
+	fade.set_color(0, Color(0.85, 1.0, 0.5, 0.0))
+	fade.set_color(1, Color(0.85, 1.0, 0.5, 0.0))
+	fade.add_point(0.3, Color(0.85, 1.0, 0.5, 0.9))
+	fade.add_point(0.7, Color(0.85, 1.0, 0.5, 0.9))
+	p.color_ramp = fade
+	decor.add_child(p)
 
 
 func _spawn(scene: PackedScene, pos: Vector2) -> Node2D:
