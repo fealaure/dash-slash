@@ -23,6 +23,9 @@ var _chunk_shots: int = 0
 ## Detecta soldado "tremendo" (virando várias vezes em meio segundo)
 var _walker_turns: Dictionary = {}  # instance_id -> [direção, frames das viradas]
 var _jitter: int = 0
+## Ataques contra quem já passou (o jogador não pode virar): deve ficar zero
+var _behind: int = 0
+var _seen_shots: Dictionary = {}
 
 
 func _ready() -> void:
@@ -52,6 +55,7 @@ func _ready() -> void:
 func _physics_process(delta: float) -> void:
 	_game_time += delta
 	_watch_walkers()
+	_watch_backstabs()
 	_shoot_chunk()
 	if not _shots.is_empty() and _game_time >= _shots[0]:
 		var path: String = "user://shot_%d.png" % int(_shots.pop_front())
@@ -110,6 +114,17 @@ func _shoot_chunk() -> void:
 			print("  captura ", ProjectSettings.globalize_path(path))
 			_chunk_shots += 1
 			return
+
+
+func _watch_backstabs() -> void:
+	for n: Node in level.entities.get_children():
+		if n is Projectile and n.scene_file_path.ends_with("shuriken.tscn") and not _seen_shots.has(n.get_instance_id()):
+			_seen_shots[n.get_instance_id()] = true
+			if n.velocity.x > 0.0:
+				_behind += 1
+		elif n is EnemySnake and n.get("_strike") > 0.0 and player.global_position.x > n.global_position.x + 4.0 \
+				and n.get("_strike") > EnemySnake.STRIKE_TIME - 0.02:
+			_behind += 1
 
 
 func _watch_walkers() -> void:
@@ -171,10 +186,11 @@ func _enemy_ahead() -> bool:
 	for n: Node in level.entities.get_children():
 		if (n is EnemyWalker or n is EnemyBat or n is EnemyNinja or n is EnemyToad or n is Projectile
 				or n is EnemyBoar or n is EnemySnake or n is EnemySwordNinja or n is Stalactite
-				or n is EnemySpider) and not n.dead:
-			var target: Node2D = n.get_node("Body") if n is EnemySpider else n
+				or n is EnemySpider or n is TrapSaw) and not n.dead:
+			var target: Node2D = n.get_node("Body") if n is EnemySpider else (n.get_node("Hitbox") if n is TrapSaw else n)
 			var d: Vector2 = target.global_position - player.global_position
-			if d.x * player.facing > -6.0 and absf(d.x) < ATTACK_RANGE and absf(d.y + 10.0) < 34.0:
+			var reach_y: float = 50.0 if n is EnemySpider else 34.0
+			if d.x * player.facing > -6.0 and absf(d.x) < ATTACK_RANGE and absf(d.y + 10.0) < reach_y:
 				return true
 	return false
 
@@ -194,6 +210,9 @@ func _finish(ok: bool, reason: String) -> void:
 		var fell: bool = player.global_position.y > player.death_y
 		reason += " caiu" if fell else " dano"
 		reason += " bloco=" + _chunk_at(player.global_position.x)
+	if _behind > 0:
+		ok = false
+		reason = "ataque pelas costas (%d)" % _behind
 	if _jitter > 0:
 		ok = false
 		reason = "soldado tremendo (%d)" % _jitter
