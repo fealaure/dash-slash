@@ -7,6 +7,8 @@ signal health_changed(current: int, maximum: int)
 signal gems_changed(total: int)
 signal started
 signal died
+## Pontos ganhos (inimigo derrotado, projétil rebatido)
+signal scored(points: int)
 
 const RUN_SPEED = 100.0
 const GRAVITY = 1000.0
@@ -23,6 +25,8 @@ const ATTACK_COOLDOWN = 0.26
 const KNOCKBACK = Vector2(150.0, -230.0)
 const HURT_STUN = 0.35
 const INVINCIBLE_TIME = 1.2
+## Intervalo entre sons de passo na corrida
+const STEP_INTERVAL = 0.26
 ## Câmera mostra mais espaço à direita (direção da corrida) e acima (verticalidade)
 const CAMERA_OFFSET = Vector2(70, -40)
 
@@ -48,6 +52,9 @@ var _attack_timer: float = 0.0
 var _attack_cooldown: float = 0.0
 var _stun: float = 0.0
 var _invincible: float = 0.0
+var _step: float = 0.0
+## Alvos já atingidos neste golpe (um golpe tira 1 de vida, não 1 por frame)
+var _swing_hits: Array = []
 
 @onready var sprite: AnimatedSprite2D = $AnimatedSprite2D
 @onready var slash_fx: Sprite2D = $SlashFX
@@ -140,6 +147,7 @@ func _handle_jump() -> void:
 			velocity.y = JUMP_VELOCITY
 			_jump_buffer = 0.0
 			_coyote = 0.0
+			Audio.play("jump")
 		elif _wall_coyote > 0.0:
 			# Pula para longe da parede
 			facing = -_wall_dir
@@ -148,6 +156,7 @@ func _handle_jump() -> void:
 			_jump_buffer = 0.0
 			_wall_coyote = 0.0
 			_clinging = false
+			Audio.play("jump")
 	# Pulo variável: soltar o botão corta a subida
 	if Input.is_action_just_released("jump") and velocity.y < 0.0:
 		velocity.y *= JUMP_CUT
@@ -170,6 +179,8 @@ func _try_attack() -> void:
 		return
 	_attack_timer = ATTACK_DURATION
 	_attack_cooldown = ATTACK_COOLDOWN
+	_swing_hits.clear()
+	Audio.play("slash")
 	# Agarrado na parede, o golpe sai para o lado oposto da parede
 	_attack_dir = -_wall_dir if _clinging else facing
 	sword_shape.position.x = 18.0 * _attack_dir
@@ -189,8 +200,12 @@ func _process_attack() -> void:
 	slash_fx.modulate.a = clampf(_attack_timer / ATTACK_DURATION, 0.0, 1.0)
 	for area: Area2D in sword.get_overlapping_areas():
 		var target: Node = area.get_parent()
-		if target.has_method("hit") and not target.get("dead"):
+		if target.has_method("hit") and not target.get("dead") and not _swing_hits.has(target):
+			_swing_hits.append(target)
 			target.call("hit")
+			Audio.play("kill")
+			if target.get("dead"):
+				scored.emit(int(target.get("points")) if target.get("points") != null else 0)
 			FX.hit_stop(get_tree())
 			shake(3.0)
 
@@ -208,12 +223,17 @@ func _check_damage() -> void:
 		return
 
 
+func can_take_damage() -> bool:
+	return _invincible <= 0.0 and not is_dead
+
+
 func take_damage(source_x: float) -> void:
 	if _invincible > 0.0 or is_dead:
 		return
 	health -= 1
 	health_changed.emit(health, max_health)
 	shake(5.0)
+	Audio.play("hurt")
 	if health <= 0:
 		die()
 		return
@@ -231,6 +251,7 @@ func take_damage(source_x: float) -> void:
 
 ## Lançado para cima por uma mola
 func bounce(launch_velocity: float) -> void:
+	Audio.play("spring")
 	velocity.y = launch_velocity
 	air_speed = RUN_SPEED
 	_coyote = 0.0
@@ -274,6 +295,12 @@ func shake(strength: float) -> void:
 
 
 func _update_visuals() -> void:
+	# Passos enquanto corre no chão
+	_step -= get_physics_process_delta_time()
+	if is_on_floor() and _stun <= 0.0 and _step <= 0.0:
+		_step = STEP_INTERVAL
+		Audio.play("step")
+
 	# Piscar durante invencibilidade
 	if _invincible > 0.0:
 		sprite.modulate.a = 0.3 if int(_invincible * 20.0) % 2 == 0 else 1.0

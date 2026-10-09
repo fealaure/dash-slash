@@ -20,5 +20,6 @@ func _process(delta: float) -> void:
 func _on_body_entered(body: Node2D) -> void:
 	if body is Player:
 		(body as Player).add_gem()
+		Audio.play("gem")
 		FX.burst(get_parent(), global_position, Color(0.4, 0.9, 1.0), 10)
 		queue_free()

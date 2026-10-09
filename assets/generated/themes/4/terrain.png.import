@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://hqoffxa4216d"
-path="res://.godot/imported/tile_stone_top.png-c9b80428dc704e815239429d289e96ef.ctex"
+uid="uid://bpfoausuvsk3t"
+path="res://.godot/imported/terrain.png-a64782b9ca06b547bbe84513585e5b49.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/generated/tile_stone_top.png"
-dest_files=["res://.godot/imported/tile_stone_top.png-c9b80428dc704e815239429d289e96ef.ctex"]
+source_file="res://assets/generated/themes/4/terrain.png"
+dest_files=["res://.godot/imported/terrain.png-a64782b9ca06b547bbe84513585e5b49.ctex"]
 
 [params]
 

@@ -8,6 +8,8 @@ const GRAVITY = 1000.0
 @export var direction: int = 1
 
 var dead: bool = false
+## Pontos ao ser derrotado
+@export var points: int = 100
 ## Depois de virar, ignora novas viradas por um instante. Sem isso o soldado
 ## travava virando a cada frame (o sensor ainda lia a posição antiga) e
 ## aparecia nos dois sentidos ao mesmo tempo, como um "X".

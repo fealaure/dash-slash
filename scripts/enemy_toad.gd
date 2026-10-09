@@ -8,6 +8,8 @@ const HOP_DELAY = 1.1
 const SIGHT = 220.0
 
 var dead: bool = false
+## Pontos ao ser derrotado
+@export var points: int = 150
 var _wait: float = HOP_DELAY
 var _fall_limit: float = 100000.0
 

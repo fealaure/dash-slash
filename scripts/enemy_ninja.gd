@@ -9,6 +9,8 @@ const THROW_SPEED = 130.0
 const COOLDOWN = 1.7
 
 var dead: bool = false
+## Pontos ao ser derrotado
+@export var points: int = 200
 var _cooldown: float = 0.5
 var _pose: float = 0.0
 

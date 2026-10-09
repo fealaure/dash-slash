@@ -8,6 +8,8 @@ extends Node2D
 
 var velocity: Vector2 = Vector2.ZERO
 var dead: bool = false
+## Pontos ao ser derrotado
+@export var points: int = 20
 var _life: float = 4.0
 
 @onready var sprite: Sprite2D = $Sprite2D

@@ -1,10 +1,10 @@
 [gd_scene format=3 uid="uid://6rls346f3i0l"]
 
 [ext_resource type="Script" uid="uid://dlih16cp5e7q8" path="res://scripts/level.gd" id="1_level"]
-[ext_resource type="Texture2D" path="res://assets/generated/bg_sky.png" id="2_sky"]
-[ext_resource type="Texture2D" path="res://assets/generated/bg_mountains.png" id="4_mountains"]
-[ext_resource type="Texture2D" path="res://assets/generated/bg_mid.png" id="5_mid"]
-[ext_resource type="Texture2D" path="res://assets/generated/bg_near.png" id="6_near"]
+[ext_resource type="Texture2D" path="res://assets/generated/themes/1/sky.png" id="2_sky"]
+[ext_resource type="Texture2D" path="res://assets/generated/themes/1/mountains.png" id="4_mountains"]
+[ext_resource type="Texture2D" path="res://assets/generated/themes/1/mid.png" id="5_mid"]
+[ext_resource type="Texture2D" path="res://assets/generated/themes/1/near.png" id="6_near"]
 [ext_resource type="PackedScene" path="res://scenes/hud.tscn" id="3_hud"]
 
 [node name="Main" type="Node2D" unique_id=476641215]

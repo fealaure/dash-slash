@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://dj5lnnvxtn54m"
-path="res://.godot/imported/tile_stone.png-7929b6ce948ffeafba063ec186ecfd69.ctex"
+uid="uid://cck8jnxv7j4m3"
+path="res://.godot/imported/near.png-127d7c17cc9a529761ccd63f8722e71f.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/generated/tile_stone.png"
-dest_files=["res://.godot/imported/tile_stone.png-7929b6ce948ffeafba063ec186ecfd69.ctex"]
+source_file="res://assets/generated/themes/2/near.png"
+dest_files=["res://.godot/imported/near.png-127d7c17cc9a529761ccd63f8722e71f.ctex"]
 
 [params]
 

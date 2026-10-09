@@ -6,6 +6,8 @@ extends Node2D
 @export var speed: float = 1.4
 
 var dead: bool = false
+## Pontos ao ser derrotado
+@export var points: int = 150
 var _origin: Vector2
 var _t: float = 0.0
 
