@@ -28,7 +28,7 @@ func _ready() -> void:
 	player = level.player
 	if OS.has_environment("BOT_CONTINUE") and Level.stage > 1:
 		print("BOT iniciou fase=%d seed=%d" % [Level.stage, level.level_seed])
-		get_tree().quit(0)
+		Audio.quit_cleanly(0)
 		return
 	for t: String in OS.get_environment("BOT_SHOTS").split(",", false):
 		_shots.append(float(t))
@@ -178,7 +178,11 @@ func _finish(ok: bool, reason: String) -> void:
 	if _jitter > 0:
 		ok = false
 		reason = "soldado tremendo (%d)" % _jitter
-	print("BOT fase=%d seed=%d result=%s motivo=%s x=%d/%d tempo=%.1fs vida=%d" % [
+	var music: AudioStreamPlayer = Audio.get("_music")
+	if music.stream == null or (DisplayServer.get_name() != "headless" and not music.playing):
+		ok = false
+		reason += " sem música"
+	print("BOT fase=%d seed=%d result=%s motivo=%s x=%d/%d tempo=%.1fs vida=%d pontos=%d musica=%s" % [
 		stage_played, level.level_seed, "PASS" if ok else "FAIL", reason, int(player.global_position.x),
-		level.player.camera.limit_right, _game_time, player.health])
-	get_tree().quit(0 if ok else 1)
+		level.player.camera.limit_right, _game_time, player.health, Level.score, music.stream.resource_path.get_file() if music.stream else "-"])
+	Audio.quit_cleanly(0 if ok else 1)
