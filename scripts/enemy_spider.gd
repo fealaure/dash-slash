@@ -1,9 +1,10 @@
 class_name EnemySpider
 extends Node2D
-## Aranha venenosa que sobe e desce pendurada no fio.
+## Aranha venenosa que sobe e desce pendurada no fio, do galho até a altura
+## de quem passa pelo chão. Corte-a no pulo.
 
-const DROP = 56.0
-const PERIOD = 2.6
+const DROP = 110.0
+const PERIOD = 3.4
 
 @export var points: int = 150
 
