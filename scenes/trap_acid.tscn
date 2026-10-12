@@ -1,0 +1,42 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/trap_acid.gd" id="1_script"]
+[ext_resource type="Texture2D" path="res://assets/generated/trap_acid.png" id="2_tex"]
+
+[sub_resource type="RectangleShape2D" id="Shape_acid"]
+size = Vector2(16, 10)
+
+[node name="TrapAcid" type="Node2D"]
+script = ExtResource("1_script")
+
+[node name="Surface" type="Sprite2D" parent="."]
+texture_repeat = 2
+modulate = Color(1.15, 1.25, 1.0, 0.92)
+position = Vector2(0, 2)
+texture = ExtResource("2_tex")
+region_enabled = true
+region_rect = Rect2(0, 0, 16, 12)
+
+[node name="Bubbles" type="CPUParticles2D" parent="."]
+position = Vector2(0, -3)
+amount = 3
+lifetime = 0.8
+emission_shape = 3
+emission_rect_extents = Vector2(7, 1)
+direction = Vector2(0, -1)
+spread = 15.0
+gravity = Vector2(0, 0)
+initial_velocity_min = 6.0
+initial_velocity_max = 12.0
+scale_amount_min = 1.0
+scale_amount_max = 2.0
+color = Color(0.7, 1, 0.3, 0.8)
+
+[node name="Area" type="Area2D" parent="."]
+collision_layer = 0
+collision_mask = 2
+monitorable = false
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Area"]
+position = Vector2(0, 3)
+shape = SubResource("Shape_acid")

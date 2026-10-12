@@ -160,6 +160,6 @@ position = Vector2(-18, -13)
 shape = SubResource("Shape_sword")
 
 [node name="Camera2D" type="Camera2D" parent="." unique_id=997339633]
-offset = Vector2(-70, -40)
+offset = Vector2(70, -40)
 position_smoothing_enabled = true
 position_smoothing_speed = 7.0

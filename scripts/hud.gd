@@ -9,6 +9,7 @@ var _touches: Dictionary = {}  # índice do toque -> nome da action
 
 @onready var hearts: HBoxContainer = $Hearts
 @onready var gem_label: Label = $GemLabel
+@onready var score_label: Label = $ScoreLabel
 @onready var time_label: Label = $TimeLabel
 @onready var message: Label = $Message
 @onready var attack_button: Panel = $AttackButton
@@ -41,6 +42,10 @@ func set_health(current: int, _maximum: int) -> void:
 
 func set_gems(count: int, total: int) -> void:
 	gem_label.text = "◆ %d/%d" % [count, total]
+
+
+func set_score(points: int) -> void:
+	score_label.text = "%d PTS" % points
 
 
 func set_time(t: float) -> void:

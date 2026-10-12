@@ -1,0 +1,21 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/trap_spring.gd" id="1_script"]
+[ext_resource type="Texture2D" path="res://assets/generated/trap_spring.png" id="2_tex"]
+
+[sub_resource type="RectangleShape2D" id="Shape_pad"]
+size = Vector2(12, 8)
+
+[node name="TrapSpring" type="Area2D"]
+collision_layer = 0
+collision_mask = 2
+monitorable = false
+script = ExtResource("1_script")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+position = Vector2(0, -7)
+texture = ExtResource("2_tex")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+position = Vector2(0, -4)
+shape = SubResource("Shape_pad")
